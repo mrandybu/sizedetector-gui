@@ -1,0 +1,8 @@
+[System]
+PManager = RPM
+duPackage = coreutils
+duTimeout = 5
+genTimeout = 5
+
+[Application]
+WinSize = 400,500
