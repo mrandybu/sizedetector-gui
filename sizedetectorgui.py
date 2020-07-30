@@ -2,10 +2,13 @@ from subprocess import Popen, PIPE
 from subprocess import TimeoutExpired
 
 from sizedetector_core import SizeDetectorCore
+from sizedetector_core import APPLICATION_NAME, LOGGER_NAME
 
 import sys
 import os
 import psutil
+
+import logging
 
 from PySide2.QtWidgets import (QApplication, QLabel, QPushButton,
                                QVBoxLayout, QWidget, QLineEdit, QTableWidget,
@@ -13,18 +16,17 @@ from PySide2.QtWidgets import (QApplication, QLabel, QPushButton,
 from PySide2.QtCore import Qt
 from PySide2 import QtGui
 
-import logging
-
-logger = logging.getLogger()
-
-APPLICATION_NAME = 'Size Detector GUI'
 WIDTH, HEIGHT = 400, 500
 
 
 class SizeDetector:
     def __init__(self, directory):
         self.directory = directory
-        self.struct = SizeDetectorCore.get_config_params()
+
+        self.struct = SizeDetectorCore().get_config_params()
+        self.cmd_args = SizeDetectorCore.get_cmd_params()
+
+        self.logger = logging.getLogger(LOGGER_NAME)
 
     def _kill_process(self, proc, name):
         timeout = int(self.struct['gentimeout'])
@@ -34,8 +36,8 @@ class SizeDetector:
         try:
             proc.wait(timeout)
         except TimeoutExpired:
-            logger.debug("Termination process timeout (pid: {}; name: {})"
-                         .format(pid, name))
+            self.logger.debug("Termination process timeout (pid: {}; name: {})"
+                              .format(pid, name))
 
         if not psutil.pid_exists(pid):
             return
@@ -47,8 +49,8 @@ class SizeDetector:
             try:
                 proc.wait(timeout)
             except TimeoutExpired:
-                logger.debug("Killing process timeout (pid: {}; name: {})"
-                             .format(pid, name))
+                self.logger.debug("Killing process timeout (pid: {}; name: {})"
+                                  .format(pid, name))
                 return
 
     def detect_size(self):
@@ -61,14 +63,14 @@ class SizeDetector:
         try:
             child = Popen(shell, stderr=PIPE, stdout=PIPE)
         except FileNotFoundError as e:
-            logger.debug("Command `{}` failed: {}".format(shell, e.strerror))
+            self.logger.debug("Command `{}` failed: {}".format(shell, e.strerror))
             return False, "Runtime error. For detailed information see log file."
 
         timeout = int(self.struct['dutimeout'])
         try:
             child.wait(timeout)
         except TimeoutExpired:
-            logger.debug("Command execution timeout `{}`".format(shell))
+            self.logger.debug("Command execution timeout `{}`".format(shell))
             self._kill_process(child, du_bin)
             return False, "Timeout. Very large size. You can increase the " \
                           "timeout in the config file."
@@ -78,7 +80,7 @@ class SizeDetector:
             if os.getuid() != 0:
                 message = "Please, try with root access.."
             else:
-                logger.debug(
+                self.logger.debug(
                     "Command `{}` failed: {}".format(shell, err.decode()))
                 message = "Runtime error. For detailed information see log file."
             return False, message
@@ -95,7 +97,10 @@ class SizeDetectorGUI(QWidget):
 
         self.app_initialize = False
 
-        self.struct = SizeDetectorCore.get_config_params()
+        self.logger = logging.getLogger(LOGGER_NAME)
+
+        self.struct = SizeDetectorCore().get_config_params()
+        self.cmd_args = SizeDetectorCore.get_cmd_params()
 
         self.gs_button = QPushButton(text="Detect Size!")
         self.ref_button = QPushButton(text="Refresh")
@@ -145,7 +150,7 @@ class SizeDetectorGUI(QWidget):
         try:
             proc = Popen(shell.split(), stdout=PIPE, stderr=PIPE)
         except FileNotFoundError as e:
-            logger.debug("Command `{}` failed: {}".format(shell, e.strerror))
+            self.logger.debug("Command `{}` failed: {}".format(shell, e.strerror))
             self._set_info_message(
                 "Runtime error. For detailed information see log file.")
             return
@@ -153,7 +158,8 @@ class SizeDetectorGUI(QWidget):
         out, err = proc.communicate()
 
         if err:
-            logger.debug("Command `{}` failed: {}".format(shell, err.decode()))
+            self.logger.debug(
+                "Command `{}` failed: {}".format(shell, err.decode()))
             self._set_info_message(
                 "Runtime error. For detailed information see log file.")
             return
@@ -207,6 +213,8 @@ class SizeDetectorGUI(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setApplicationDisplayName(APPLICATION_NAME)
+
+    SizeDetectorCore().create_logger()
 
     current_exit_code = SizeDetectorGUI.EXIT_CODE_REBOOT
     while current_exit_code == SizeDetectorGUI.EXIT_CODE_REBOOT:
