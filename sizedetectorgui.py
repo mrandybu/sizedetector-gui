@@ -72,8 +72,8 @@ class SizeDetector:
         except TimeoutExpired:
             self.logger.debug("Command execution timeout `{}`".format(shell))
             self._kill_process(child, du_bin)
-            return False, "Timeout. Very large size. You can increase the " \
-                          "timeout in the config file."
+            return False, "Timeout detecting. Very large size.\n" \
+                          "You can increase the timeout in the config file."
 
         out, err = child.communicate()
         if err:
