@@ -9,10 +9,10 @@ import os
 APPLICATION_NAME = 'Size Detector GUI'
 LOGGER_NAME = ''.join(APPLICATION_NAME.split())
 
-CONFIG_FILE_PATH = './config'
 STRUCTURE_TEMPLATE = {
-    'System': ['PManager', 'duPackage', 'duTimeout', 'genTimeout'],
-    'Application': ['WinSize'],
+    'System': {'PManager': str, 'duPackage': str, 'duTimeout': int,
+               'genTimeout': int, },
+    'Application': {'WinSize': (int, int), },
 }
 
 
@@ -36,15 +36,30 @@ class SizeDetectorCore:
 
     def get_config_params(self):
         config = configparser.ConfigParser()
-        config.read(CONFIG_FILE_PATH)
+        config.read(self.get_cmd_params().config)
 
         struct = {}
         for sec, opts in STRUCTURE_TEMPLATE.items():
-            for opt in opts:
+            for opt, type_ in opts.items():
                 try:
-                    struct[opt.lower()] = config.get(sec, opt).lower()
-                except (NoSectionError, NoOptionError) as err:
-                    self.logger.debug(err.message)
+                    value = config.get(sec, opt)
+                    if isinstance(type_, tuple):
+                        values = [val.replace(' ', '') for val in value.split(',')]
+                        if len(type_) != len(values):
+                            raise ValueError(
+                                "The number of required types does not match "
+                                "the number of parameters")
+
+                        tpl_vals = ()
+                        for i in range(len(type_)):
+                            tpl_vals += (type_[i](values[i]),)
+                        struct[opt.lower()] = tpl_vals
+
+                    else:
+                        struct[opt.lower()] = type_(value.lower())
+
+                except (NoSectionError, NoOptionError, ValueError) as err:
+                    self.logger.debug(err)
                     return
 
         return struct

@@ -29,7 +29,7 @@ class SizeDetector:
         self.logger = logging.getLogger(LOGGER_NAME)
 
     def _kill_process(self, proc, name):
-        timeout = int(self.struct['gentimeout'])
+        timeout = self.struct['gentimeout']
         pid = proc.pid
 
         proc.terminate()
@@ -66,7 +66,7 @@ class SizeDetector:
             self.logger.debug("Command `{}` failed: {}".format(shell, e.strerror))
             return False, "Runtime error. For detailed information see log file."
 
-        timeout = int(self.struct['dutimeout'])
+        timeout = self.struct['dutimeout']
         try:
             child.wait(timeout)
         except TimeoutExpired:
@@ -220,9 +220,8 @@ if __name__ == '__main__':
     while current_exit_code == SizeDetectorGUI.EXIT_CODE_REBOOT:
         widget = SizeDetectorGUI()
         if widget.app_initialize:
-            win_size = widget.struct['winsize'].split(',')
-            WIDTH = int(win_size[0].replace(' ', ''))
-            HEIGHT = int(win_size[1].replace(' ', ''))
+            WIDTH = widget.struct['winsize'][0]
+            HEIGHT = widget.struct['winsize'][1]
         widget.resize(WIDTH, HEIGHT)
         if widget.PREVIOUS_GEOMETRY:
             widget.setGeometry(widget.PREVIOUS_GEOMETRY)
