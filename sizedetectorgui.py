@@ -211,6 +211,16 @@ class SizeDetectorGUI(QWidget):
 
 
 if __name__ == '__main__':
+    args = SizeDetectorCore.get_cmd_params()
+    logger = logging.getLogger(LOGGER_NAME)
+
+    try:
+        result = SizeDetector(args.path).detect_size()
+        SizeDetectorCore.print_message(result[1])
+        sys.exit()
+    except AttributeError:
+        logger.debug("Reading parameters from config file")
+
     app = QApplication(sys.argv)
     app.setApplicationDisplayName(APPLICATION_NAME)
 

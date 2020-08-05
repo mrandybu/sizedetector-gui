@@ -76,3 +76,20 @@ class SizeDetectorCore:
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             fn.setFormatter(formatter)
             app_logger.addHandler(fn)
+
+    @staticmethod
+    def print_message(message, delimiter=None):
+        if type(message) is list:
+            for elem in message:
+                if delimiter:
+                    print(" ".join(elem.split(delimiter)))
+                else:
+                    print(elem)
+            return
+
+        if delimiter:
+            for msg in message.split(delimiter):
+                print(msg)
+            return
+
+        print(message)
